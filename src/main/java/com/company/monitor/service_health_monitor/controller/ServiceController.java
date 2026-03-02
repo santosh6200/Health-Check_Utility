@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/services")
+@CrossOrigin("*")
 public class ServiceController {
 
   private final MonitoredServiceRepository repo;
