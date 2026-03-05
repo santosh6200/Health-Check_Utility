@@ -19,4 +19,6 @@ public class MonitoredService {
   private boolean active = true;
   private String owner;
   private String criticality;
+  private String category;
+  private String icon;
 }
