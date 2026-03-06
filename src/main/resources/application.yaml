@@ -14,6 +14,6 @@ spring:
     show-sql: true
 
 monitor:
-  scheduler-rate: 60000
+  scheduler-rate: 600000
 
 
