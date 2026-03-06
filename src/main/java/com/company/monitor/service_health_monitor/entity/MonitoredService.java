@@ -20,5 +20,4 @@ public class MonitoredService {
   private String owner;
   private String criticality;
   private String category;
-  private String icon;
 }

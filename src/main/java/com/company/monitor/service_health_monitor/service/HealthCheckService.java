@@ -47,8 +47,12 @@ public class HealthCheckService {
       ResponseEntity<String> response = restTemplate.getForEntity(svc.getHealthUrl(), String.class);
       if (response.getStatusCode().is2xxSuccessful()) {
         String body = response.getBody();
-        if (body != null && (body.contains("\"status\":\"UP\"") || body.equalsIgnoreCase("UP") || body.contains("UP"))) {
+        if (body != null
+            && (body.contains("\"status\":\"UP\"") || body.equalsIgnoreCase("UP") || body.contains("UP"))) {
           status = "UP";
+        } else if (body != null && (body.contains("\"status\":\"DOWN\"") || body.equalsIgnoreCase("DOWN")
+            || body.contains("DOWN") || body.contains("failing"))) {
+          status = "DOWN";
         } else {
           status = "UP";
         }
