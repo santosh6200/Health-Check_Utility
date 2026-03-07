@@ -24,7 +24,7 @@ public class MonitoringController {
 
   @GetMapping("/history")
   public List<ServiceStatusHistory> getHistory() {
-    return historyRepo.findAll();
+    return historyRepo.findLatestGlobalHistory();
   }
 
   @PostMapping("/refresh")

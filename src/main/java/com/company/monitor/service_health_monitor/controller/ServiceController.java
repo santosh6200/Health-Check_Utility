@@ -1,6 +1,7 @@
 package com.company.monitor.service_health_monitor.controller;
 
 import com.company.monitor.service_health_monitor.entity.MonitoredService;
+import com.company.monitor.service_health_monitor.entity.ServiceStatusHistory;
 import com.company.monitor.service_health_monitor.repository.MonitoredServiceRepository;
 import com.company.monitor.service_health_monitor.repository.ServiceStatusHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +34,13 @@ public class ServiceController {
     return repo.findByActiveTrue();
   }
 
+  @GetMapping("/{id}")
+  public MonitoredService getServiceById(@PathVariable("id") Long id) {
+    return repo.findById(id).orElseThrow(() -> new RuntimeException("Service not found"));
+  }
+
   @PutMapping("/{id}")
-  public MonitoredService updateService(@PathVariable Long id, @RequestBody MonitoredService serviceDetails) {
+  public MonitoredService updateService(@PathVariable("id") Long id, @RequestBody MonitoredService serviceDetails) {
     MonitoredService service = repo.findById(id).orElseThrow(() -> new RuntimeException("Service not found"));
     service.setServiceName(serviceDetails.getServiceName());
     service.setHealthUrl(serviceDetails.getHealthUrl());
@@ -44,9 +50,14 @@ public class ServiceController {
     return repo.save(service);
   }
 
+  @GetMapping("/{id}/history")
+  public List<ServiceStatusHistory> getServiceHistory(@PathVariable("id") Long id) {
+    return historyRepo.findTop1000ByServiceIdOrderByIdDesc(id);
+  }
+
   @DeleteMapping("/{id}")
   @Transactional
-  public void deleteService(@PathVariable Long id) {
+  public void deleteService(@PathVariable("id") Long id) {
     historyRepo.deleteByServiceId(id);
     repo.deleteById(id);
   }

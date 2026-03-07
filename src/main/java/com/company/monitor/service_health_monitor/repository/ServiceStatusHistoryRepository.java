@@ -14,11 +14,14 @@ import java.util.List;
 public interface ServiceStatusHistoryRepository
   extends JpaRepository<ServiceStatusHistory, Long> {
 
-  List<ServiceStatusHistory> findByServiceId(Long serviceId);
-
   @Modifying(clearAutomatically = true)
   @Transactional
   @Query("DELETE FROM ServiceStatusHistory h WHERE h.serviceId = :serviceId")
   void deleteByServiceId(Long serviceId);
+
+  List<ServiceStatusHistory> findTop1000ByServiceIdOrderByIdDesc(Long serviceId);
+  
+  @Query(value = "SELECT * FROM service_status_history ORDER BY id DESC LIMIT 500", nativeQuery = true)
+  List<ServiceStatusHistory> findLatestGlobalHistory();
 }
 
