@@ -13,7 +13,7 @@ public class HealthCheckScheduler {
         this.healthCheckService = healthCheckService;
     }
 
-    @Scheduled(fixedRateString = "${monitor.scheduler-rate}")
+    @Scheduled(fixedRateString = "${monitor.scheduler-rate:60000}")
     public void runHealthCheck() {
         healthCheckService.checkAllServices();
     }
