@@ -9,7 +9,8 @@ public class HealthCheckScheduler {
 
     private final HealthCheckService healthCheckService;
 
-    public HealthCheckScheduler(HealthCheckService healthCheckService) {
+    public HealthCheckScheduler(HealthCheckService healthCheckService)
+    {
         this.healthCheckService = healthCheckService;
     }
 

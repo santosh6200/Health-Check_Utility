@@ -1,19 +1,28 @@
 spring:
   application:
     name: service-health-monitor
-
   profiles:
     active: dev
   datasource:
     url: jdbc:mysql://localhost:3306/health_check?createDatabaseIfNotExist=true
     username: root
-    password: root@39
+    password: Santosh@123
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
 
+server:
+  port: 8082
+
 monitor:
   scheduler-rate: 600000
 
-
+keycloak:
+  auth-server-url: http://localhost:8080
+  realm: health-monitor-realm
+  admin:
+    username: santosh_6200
+    password: Santosh@123
+    client-id: admin-cli
+    client-secret: QeyYTyC0MPSx6YnbYz900DbBXAJVxLUX

@@ -4,6 +4,7 @@ import com.company.monitor.service_health_monitor.entity.MonitoredService;
 import com.company.monitor.service_health_monitor.entity.ServiceStatusHistory;
 import com.company.monitor.service_health_monitor.repository.MonitoredServiceRepository;
 import com.company.monitor.service_health_monitor.repository.ServiceStatusHistoryRepository;
+import com.company.monitor.service_health_monitor.service.KeycloakSecretService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -17,14 +18,20 @@ public class ServiceController {
 
   private final MonitoredServiceRepository repo;
   private final ServiceStatusHistoryRepository historyRepo;
+  private final KeycloakSecretService keycloakSecretService;
 
-  public ServiceController(MonitoredServiceRepository repo, ServiceStatusHistoryRepository historyRepo) {
+  public ServiceController(MonitoredServiceRepository repo, 
+                           ServiceStatusHistoryRepository historyRepo,
+                           KeycloakSecretService keycloakSecretService) {
     this.repo = repo;
     this.historyRepo = historyRepo;
+    this.keycloakSecretService = keycloakSecretService;
   }
 
   @PostMapping
-  public MonitoredService addService(@RequestBody MonitoredService service) {
+  public MonitoredService addService(@RequestBody java.util.Map<String, String> payload) {
+    MonitoredService service = new MonitoredService();
+    mapAndSaveSecrets(service, payload);
     service.setActive(true);
     return repo.save(service);
   }
@@ -40,14 +47,31 @@ public class ServiceController {
   }
 
   @PutMapping("/{id}")
-  public MonitoredService updateService(@PathVariable("id") Long id, @RequestBody MonitoredService serviceDetails) {
+  public MonitoredService updateService(@PathVariable("id") Long id, @RequestBody java.util.Map<String, String> payload) {
     MonitoredService service = repo.findById(id).orElseThrow(() -> new RuntimeException("Service not found"));
-    service.setServiceName(serviceDetails.getServiceName());
-    service.setHealthUrl(serviceDetails.getHealthUrl());
-    service.setOwner(serviceDetails.getOwner());
-    service.setCriticality(serviceDetails.getCriticality());
-    service.setCategory(serviceDetails.getCategory());
+    mapAndSaveSecrets(service, payload);
     return repo.save(service);
+  }
+
+  private void mapAndSaveSecrets(MonitoredService service, java.util.Map<String, String> payload) {
+    service.setServiceName(payload.get("serviceName"));
+    service.setHealthUrl(payload.get("healthUrl"));
+    service.setOwner(payload.get("owner"));
+    service.setCriticality(payload.get("criticality"));
+    service.setCategory(payload.get("category"));
+    service.setAuthType(payload.get("authType"));
+    service.setUsername(payload.get("username"));
+    service.setKeycloakReferenceId(payload.get("keycloakReferenceId"));
+    service.setTokenUrl(payload.get("tokenUrl"));
+    service.setClientId(payload.get("clientId"));
+
+    String refId = service.getKeycloakReferenceId();
+    if (refId != null && !refId.isEmpty()) {
+        if (payload.containsKey("password")) keycloakSecretService.storeSecret(refId, "PASSWORD", payload.get("password"));
+        if (payload.containsKey("apiKey")) keycloakSecretService.storeSecret(refId, "API_KEY", payload.get("apiKey"));
+        if (payload.containsKey("token")) keycloakSecretService.storeSecret(refId, "TOKEN", payload.get("token"));
+        if (payload.containsKey("clientSecret")) keycloakSecretService.storeSecret(refId, "CLIENT_SECRET", payload.get("clientSecret"));
+    }
   }
 
   @GetMapping("/{id}/history")

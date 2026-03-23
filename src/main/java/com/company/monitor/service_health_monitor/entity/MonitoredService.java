@@ -20,4 +20,9 @@ public class MonitoredService {
   private String owner;
   private String criticality;
   private String category;
+  private String authType;
+  private String username;
+  private String keycloakReferenceId; // Reference to Keycloak Client or User
+  private String tokenUrl;
+  private String clientId;
 }

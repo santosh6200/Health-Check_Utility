@@ -9,6 +9,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.http.MediaType;
+import java.util.Map;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,6 +29,7 @@ public class HealthCheckService {
   private final ServiceStatusHistoryRepository historyRepo;
   private final RestTemplate restTemplate;
   private final AlertService alertService;
+  private final KeycloakSecretService keycloakSecretService;
 
   @PostConstruct
   public void init() {
@@ -44,7 +53,35 @@ public class HealthCheckService {
     String status = "DOWN";
 
     try {
-      ResponseEntity<String> response = restTemplate.getForEntity(svc.getHealthUrl(), String.class);
+      HttpHeaders headers = new HttpHeaders();
+
+// 🔐 Apply Authentication
+      String refId = svc.getKeycloakReferenceId();
+      if ("BASIC".equalsIgnoreCase(svc.getAuthType())) {
+        String password = keycloakSecretService.getSecret(refId, "PASSWORD");
+        headers.setBasicAuth(svc.getUsername(), password);
+
+      } else if ("API_KEY".equalsIgnoreCase(svc.getAuthType())) {
+        String apiKey = keycloakSecretService.getSecret(refId, "API_KEY");
+        headers.set("x-api-key", apiKey);
+
+      } else if ("BEARER".equalsIgnoreCase(svc.getAuthType())) {
+        String token = keycloakSecretService.getSecret(refId, "TOKEN");
+        headers.setBearerAuth(token);
+
+      } else if ("OAUTH2".equalsIgnoreCase(svc.getAuthType())) {
+        String token = getOAuthToken(svc);
+        headers.setBearerAuth(token);
+      }
+
+      HttpEntity<String> entity = new HttpEntity<>(headers);
+
+      ResponseEntity<String> response = restTemplate.exchange(
+        svc.getHealthUrl(),
+        HttpMethod.GET,
+        entity,
+        String.class
+      );
       if (response.getStatusCode().is2xxSuccessful()) {
         String body = response.getBody();
         if (body != null
@@ -59,9 +96,15 @@ public class HealthCheckService {
       } else {
         status = "DOWN";
       }
-    } catch (Exception ex) {
-      status = "DOWN";
-    }
+    }  catch (HttpClientErrorException.Unauthorized e) {
+    status = "UNAUTHORIZED";
+
+  } catch (HttpClientErrorException.Forbidden e) {
+    status = "FORBIDDEN";
+
+  } catch (Exception ex) {
+    status = "DOWN";
+  }
 
     long responseTime = System.currentTimeMillis() - start;
     ServiceStatusHistory history = new ServiceStatusHistory();
@@ -74,5 +117,27 @@ public class HealthCheckService {
     if ("DOWN".equals(status)) {
       alertService.sendAlert(svc.getServiceName());
     }
+  }
+  private String getOAuthToken(MonitoredService svc) {
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+    MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+    body.add("grant_type", "client_credentials");
+    body.add("client_id", svc.getClientId());
+    String clientSecret = keycloakSecretService.getSecret(svc.getKeycloakReferenceId(), "CLIENT_SECRET");
+    body.add("client_secret", clientSecret);
+
+    HttpEntity<MultiValueMap<String, String>> request =
+      new HttpEntity<>(body, headers);
+
+    ResponseEntity<Map> response = restTemplate.postForEntity(
+      svc.getTokenUrl(),
+      request,
+      Map.class
+    );
+
+    return (String) response.getBody().get("access_token");
   }
 }
